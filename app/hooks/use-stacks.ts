@@ -1,57 +1,74 @@
 import {
-    AppConfig,
-    showConnect,
-    type UserData,
-    UserSession,
-  } from "@stacks/connect";
-  import { useEffect, useState } from "react";
-  
-  export function useStacks() {
-    // Initially when the user is not logged in, userData is null
-    const [userData, setUserData] = useState<UserData | null>(null);
-  
-    // create application config that allows
-    // storing authentication state in browser's local storage
+  AppConfig,
+  showConnect,
+  UserData,
+  UserSession,
+} from "@stacks/connect";
+import { useEffect, useState, useMemo } from "react";
+
+export function useStacks() {
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  const userSession = useMemo(() => {
     const appConfig = new AppConfig(["store_write"]);
-  
-    // creating a new user session based on the application config
-    const userSession = new UserSession({ appConfig });
-  
-    function connectWallet() {
+    return new UserSession({ appConfig });
+  }, []);
+
+  function connectWallet() {
+    try {
+      if (userSession.isUserSignedIn()) {
+        console.log("User already signed in");
+        setUserData(userSession.loadUserData());
+        return;
+      }
+
       showConnect({
         appDetails: {
-          name: "Stacks Account History",
+          name: "Stacks Account Hist",
           icon: "https://cryptologos.cc/logos/stacks-stx-logo.png",
         },
         onFinish: () => {
-          // reload the webpage when wallet connection succeeds
-          // to ensure that the user session gets populated from local storage
-          window.location.reload();
+          try {
+            // ✅ Reload only if window exists to avoid SSR issues
+            if (typeof window !== "undefined") {
+              window.location.reload();
+            }
+          } catch (err) {
+            console.error("Error reloading:", err);
+          }
         },
         userSession,
       });
+    } catch (err) {
+      console.error("LoginFailedError:", err);
+
+      // ✅ If decryption fails, sign out and reset session
+      if (err instanceof Error && err.message.includes("Failed decrypting appPrivateKey")) {
+        userSession.signUserOut();
+        setUserData(null);
+        console.log("Session reset due to decryption error. Please try logging in again.");
+      }
     }
-  
-    function disconnectWallet() {
-      // sign out the user and close their session
-      // also clear out the user data
-      userSession.signUserOut();
-      setUserData(null);
-    }
-  
-    // When the page first loads, if the user is already signed in,
-    // set the userData
-    // If the user has a pending sign-in instead, resume the sign-in flow
-    useEffect(() => {
+  }
+
+  function disconnectWallet() {
+    userSession.signUserOut();
+    setUserData(null);
+  }
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
       if (userSession.isUserSignedIn()) {
         setUserData(userSession.loadUserData());
       } else if (userSession.isSignInPending()) {
         userSession.handlePendingSignIn().then((userData) => {
           setUserData(userData);
+        }).catch((err) => {
+          console.error("Error handling pending sign-in:", err);
         });
       }
-    }, []);
-  
-    // return the user data, connect wallet function, and disconnect wallet function
-    return { userData, connectWallet, disconnectWallet };
-  }
+    }
+  }, [userSession]);
+
+  return { userData, connectWallet, disconnectWallet };
+}

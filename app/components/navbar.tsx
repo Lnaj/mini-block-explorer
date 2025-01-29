@@ -38,7 +38,7 @@ export function Navbar() {
   return (
     <nav className="flex w-full items-center justify-between gap-4 p-4 h-16 border-b border-gray-500">
       <Link href="/" className="text-2xl font-bold">
-        Stacks Account History
+        Stacks Account Hist
       </Link>
 
       <input
