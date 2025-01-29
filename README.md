@@ -1,4 +1,4 @@
-### **README for Mini Block Explorer (Stacks)**
+### ** Mini Block Explorer (Stacks)**
 
 # **Mini Block Explorer**
 A simple web application built with **Next.js** and **@stacks/connect** to interact with the **Stacks blockchain**. Users can authenticate using their Stacks wallet, view account history, and explore blockchain data.
